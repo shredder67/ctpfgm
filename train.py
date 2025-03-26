@@ -63,7 +63,6 @@ def loss_ct(sde, model, ema, samples_batch, dt = 0.01):
             z_drift=empirical_dir[:, -1].squeeze(),
             return_with_aug=True
         )
-        # print("drift.shape", drift.shape)
         if sde.config.training.ct_dt_mode == 'fixed':
             num_steps = sde.config.sampling.CT_steps
             dt = - (np.log(sde.config.sampling.z_max) - np.log(sde.config.sampling.z_min)) / num_steps
@@ -90,7 +89,10 @@ def loss_ct(sde, model, ema, samples_batch, dt = 0.01):
     pred_dir_x = pred_dir_x.view(len(pred_dir_x), -1)
     pred_dir = torch.cat([pred_dir_x, pred_dir_z[:, None]], dim=1)
     # NOTE: in original CM preconditioning is used, but here we simply match direction towards data
-    loss = pseudo_huber_loss(pred_dir, target_dir).mean()
+    loss_fn = mse_loss if sde.config.training.ct_loss_type == 'mse' else pseudo_huber_loss
+    loss = loss_fn(pred_dir, target_dir)
+    if sde.config.training.ct_loss_type == 'pseudo_huber':
+        loss = loss.mean()
     return loss
 
 
