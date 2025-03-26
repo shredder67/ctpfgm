@@ -1,0 +1,7 @@
+.vscode/
+env_pfct/
+data/
+wandb/
+__pycache__/
+checkpoints/
+config.json
