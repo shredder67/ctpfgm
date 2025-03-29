@@ -35,6 +35,14 @@ def seed_everything(seed):
         torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
 
+def simple_precond(sde, x, model_pred, z_min, z_max):
+    """dummy linear parametrization to meet the consistency property"""
+    x_x, x_z = x[:, :-1], x[:, -1]
+    x_x_dir, x_z_dir = model_pred[:, :-1], model_pred[:, -1]
+    coef = torch.clamp((x_z - z_min)/ (z_max - z_min), 0, 1)[:, None] # 0 - close to data, 1 - close to prior
+    u = (1 - coef) * x + coef * model_pred
+    return u
+
 
 def loss_ect(sde, model, ema, samples_batch, dt = 0.01):
     raise NotImplementedError
@@ -88,11 +96,19 @@ def loss_ct(sde, model, ema, samples_batch, dt = 0.01):
     )
     pred_dir_x = pred_dir_x.view(len(pred_dir_x), -1)
     pred_dir = torch.cat([pred_dir_x, pred_dir_z[:, None]], dim=1)
-    # NOTE: in original CM preconditioning is used, but here we simply match direction towards data
+
     loss_fn = mse_loss if sde.config.training.ct_loss_type == 'mse' else pseudo_huber_loss
-    loss = loss_fn(pred_dir, target_dir)
+    if sde.config.training.ct_precond == 'simple':
+        with torch.no_grad():
+            target_u = simple_precond(sde, attracted_samples_vec, target_dir, sde.config.sampling.z_min, sde.config.sampling.z_max)
+        pred_u = simple_precond(sde, perturbed_samples_vec, pred_dir, sde.config.sampling.z_min, sde.config.sampling.z_max)
+        loss = loss_fn(pred_u, target_u)
+    else:
+        loss = loss_fn(pred_dir, target_dir)
+    
     if sde.config.training.ct_loss_type == 'pseudo_huber':
         loss = loss.mean()
+
     return loss
 
 

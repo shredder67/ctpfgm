@@ -64,7 +64,8 @@ def get_mnist_config():
     config.training.fid_freq = 25_000
     config.training.fid_batch_size = 250
     config.training.ct_dt_mode = 'fixed' # 'fixed' or 'adaptive'
-    config.training.ct_loss_type = 'mse' # 'mse', 'pseudo_huber'
+    config.training.ct_loss_type = 'pseudo_huber' # 'mse', 'pseudo_huber'
+    config.training.ct_precond = 'simple' # 'simple' or 'none'
 
     config.model  = ConfigDict()
     config.model.name = 'ncsnpp'
@@ -96,7 +97,7 @@ def get_mnist_config():
     config.optim  = ConfigDict()
     config.optim.weight_decay = 0.9999
     config.optim.optimizer = 'Adam'
-    config.optim.lr = 1e-5
+    config.optim.lr = 8e-6
     config.optim.beta1 = 0.9
     config.optim.beta2 = 0.999
     config.optim.eps = 1e-8
